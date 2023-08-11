@@ -2,9 +2,11 @@
 import cv2, time, dlib, matplotlib.pyplot as plt, numpy as np
 import AUmaps
 
-AUdetector = AUmaps.AUdetector('shape_predictor_68_face_landmarks.dat',enable_cuda=True)
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]  =  "TRUE"
+AUdetector = AUmaps.AUdetector("shape_predictor_68_face_landmarks.dat", enable_cuda=True)
 
-cam = cv2.VideoCapture(1)
+cam = cv2.VideoCapture(0)
 
 
 fig = plt.figure(figsize=plt.figaspect(.5))
@@ -23,37 +25,34 @@ while True:
 	_, img = cam.read()
 	try:
 		# Downscale webcam image 2x to speed things up
-		img = cv2.resize(img, None, fx = 0.5, fy = 0.5)
+		img = cv2.resize(img, None, fx=0.5, fy=0.5)
+		# cv2.imshow('Action Unit Heatmaps - Press Q to exit!', img)
 
 		# Optionally flip webcam image, probably not relevant
 		# img = cv2.flip(img, 1)
 
-		# Optionally display webcam image with opencv
-		# cv2.imshow('Action Unit Heatmaps - Press Q to exit!', img)
-		# if cv2.waitKey(1) & 0xFF == ord('q'):
-		# 	break
-
 		img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
 		nframes += 1
 
 		pred,map,img = AUdetector.detectAU(img)
-		for j in range(0,5):
-			resized_map = dlib.resize_image(map[j,:,:].cpu().data.numpy(),rows=256,cols=256)
+		img = cv2.resize(img, (256, 256))
+		first_map = dlib.resize_image(map[0, :, :].cpu().data.numpy(), rows=256, cols=256)
+		colored_img = plt.get_cmap('hot')(first_map)
+		colored_img = (colored_img[:, :, :3] * 255).astype(np.uint8)
+		print("The shape of colored img is : " + str(colored_img.shape))
+		concatenated_img = colored_img
+		for j in range(1, 5):
+			resized_map = dlib.resize_image(map[j, :, :].cpu().data.numpy(), rows=256, cols=256)
+			colored_img = plt.get_cmap('hot')(resized_map)
+			colored_img = (colored_img[:, :, :3] * 255).astype(np.uint8)
+			concatenated_img = np.hstack((concatenated_img, colored_img))
 
-		# Update face image subplot
-			implots[2*j].set_data(img)
-
-		# Update heatmap subplot
-			implots[2*j+1].set_data(resized_map)
-
-			# Set correct heatmap limits
-			resized_map_flat = resized_map.flatten()
-			implots[2*j+1].set_clim(min(resized_map_flat), max(resized_map_flat))
-
-		# To plot heatmaps the original way - looks identical to the new way!
-		# ax = fig.add_subplot(5,2,2*j+1)
-		# ax.imshow(resized_map)
-		# ax.axis('off')
+		concatenated_img = np.hstack((concatenated_img, img))
+		# Optionally display webcam image with opencv
+		cv2.imshow('Action Unit Heatmaps - Press Q to exit!', concatenated_img)
+		if cv2.waitKey(1) & 0xFF == ord('q'):
+			break
 
 		plt.pause(0.001)
 		plt.draw()

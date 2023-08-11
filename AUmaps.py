@@ -12,7 +12,7 @@ except BaseException:
 
 class AUdetector:
 
-    def __init__(self, path_to_predictor='shape_predictor_68_face_landmarks.dat', enable_cuda=True):
+    def __init__(self, path_to_predictor='./shape_predictor_68_face_landmarks.dat', enable_cuda=True):
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor(path_to_predictor)
         # Initialise AU detector
